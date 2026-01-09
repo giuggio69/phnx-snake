@@ -94,6 +94,38 @@
     html, body { overscroll-behavior: none; }
     body { touch-action: none; -webkit-user-select: none; user-select: none; }
     canvas { touch-action: none; }
+    .overlayStart{
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.55);
+      z-index: 9999;
+      padding: 20px;
+    }
+    .overlayCard{
+      width: min(520px, 92vw);
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.35);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      padding: 18px;
+      text-align: center;
+    }
+    .overlayCard h2{ margin: 0 0 8px; font-size: 22px; letter-spacing: 0.4px; }
+    .overlayCard p{ margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .overlayCard .tap{
+      margin-top: 14px;
+      display:inline-block;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      border: 1px solid rgba(255,59,107,0.55);
+      background: rgba(255,59,107,0.14);
+    }
+
 </style>
 </head>
 <body>
@@ -106,13 +138,13 @@
             <img class="logoImg" src="logo_phnx.png" alt="PHNX Logo">
           </div>
           <div class="title">
-            <b>PHNX • SHIBUYA SNAKE  •  VERSION v103</b>
+            <b>PHNX • SHIBUYA SNAKE</b>
             <span>Play to Win Discount • Streetwear Gaming Room</span>
           </div>
         </div>
         <div class="pill" id="challengePill">Sfida: raggiungi <span id="targetLabel">30</span> punti → sconto</div>
       </div>
-      <canvas id="game" width="640" height="640"></canvas>
+      <canvas id="game" width="640" height="640" tabindex="0"></canvas>
     </div>
 
     <div class="card">
@@ -178,7 +210,7 @@
 <script>
 (() => {
   // ====== LINK (per QR) ======
-  const GAME_URL = "https://giuggio69.github.io/phnx-snake/?v=103";
+  const GAME_URL = "https://giuggio69.github.io/phnx-snake/?v=99";
   document.getElementById("gameLink").textContent = GAME_URL;
 
   const copyLinkBtn = document.getElementById("copyLinkBtn");
@@ -201,26 +233,6 @@
 // ====== Game ======
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
-
-  // ====== CANVAS SELF-TEST (v103) ======
-  // This draws even if the game loop never starts.
-  function canvasSelfTest(){
-    try{
-      ctx.save();
-      // border
-      ctx.strokeStyle = "rgba(255,59,107,0.95)";
-      ctx.lineWidth = 6;
-      ctx.strokeRect(3,3,canvas.width-6,canvas.height-6);
-      // dot
-      ctx.fillStyle = "rgba(0,245,212,0.95)";
-      ctx.beginPath();
-      ctx.arc(canvas.width*0.5, canvas.height*0.5, 14, 0, Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-    } catch(e) {}
-  }
-  canvasSelfTest();
-
   const GRID = 18;
   const CELL = canvas.width / GRID;
 
@@ -240,6 +252,11 @@
   const copyBtn = document.getElementById("copyBtn");
   const newChallengeBtn = document.getElementById("newChallengeBtn");
   const targetLabel = document.getElementById("targetLabel");
+
+  const startOverlay = document.getElementById("startOverlay");
+  const isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+
+
 
   targetLabel.textContent = TARGET_SCORE;
 
@@ -289,7 +306,7 @@
     ctx.fillStyle = "rgba(0,0,0,0.15)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    ctx.strokeStyle = "rgba(255,255,255,0.28)";
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
     ctx.lineWidth = 1;
     for (let i=0;i<=GRID;i++) {
       ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, canvas.height); ctx.stroke();
@@ -320,9 +337,12 @@
   }
 
   function draw() {
+    if (isTouch && startOverlay) {
+      startOverlay.style.display = running ? "none" : "flex";
+    }
     drawGrid();
 
-    // Food (PHNX logo)
+// Food (PHNX logo)
     const fx = food.x * CELL, fy = food.y * CELL;
 
     // Background tile
@@ -440,18 +460,9 @@
   }
 
   function gameOver() {
-    running = false;
-    paused = false;
-
-    drawGrid();
-    draw();
-    overlay("Game Over");
-
-    setTimeout(() => {
-      resetGame();
-      draw();
-    }, 600);
-  }, 900);
+    running = false; paused = false;
+    drawGrid(); draw(); overlay("Game Over");
+    setTimeout(() => { draw(); }, 900);
   }
 
   function makeCode() {
@@ -489,34 +500,51 @@
   }
 
   
-  // ====== Mobile controls: v103 (tap + swipe on canvas) ======
+  // Start the game on tap (mobile)
+  function tapStart(){
+    if (!running) start();
+  }
+  if (startOverlay){
+    startOverlay.addEventListener("click", tapStart);
+    startOverlay.addEventListener("touchstart", (e)=>{ tapStart(); }, {passive:true});
+  }
+  document.addEventListener("click", (e)=>{ if (isTouch) tapStart(); }, {passive:true});
+
+  // Swipe anywhere (mobile) — robust
   let sx = null, sy = null;
-  function tapStart(){ if (!running) start(); }
-
-  canvas.addEventListener("pointerdown", () => { tapStart(); });
-
-  canvas.addEventListener("touchstart", (e) => {
+  function tStart(e){
     if (!e.touches || !e.touches.length) return;
-    const t = e.touches[0];
-    sx = t.clientX; sy = t.clientY;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
     tapStart();
-  }, {passive:true});
-
-  canvas.addEventListener("touchmove", (e) => {
+  }
+  function tMove(e){
     if (sx === null || sy === null) return;
     if (!e.touches || !e.touches.length) return;
-    const t = e.touches[0];
-    const dx = t.clientX - sx;
-    const dy = t.clientY - sy;
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    const dx = x - sx;
+    const dy = y - sy;
     const ax = Math.abs(dx), ay = Math.abs(dy);
-    if (ax < 14 && ay < 14) return;
-    e.preventDefault();
-    if (ax > ay) setDir(dx > 0 ? 1 : -1, 0);
-    else setDir(0, dy > 0 ? 1 : -1);
-    sx = t.clientX; sy = t.clientY;
-  }, {passive:false});
+    const threshold = 14;
+    if (ax < threshold && ay < threshold) return;
 
-  canvas.addEventListener("touchend", () => { sx = null; sy = null; }, {passive:true});
+    // prevent scrolling
+    e.preventDefault();
+
+    if (ax > ay){
+      if (dx > 0) setDir(1,0); else setDir(-1,0);
+    } else {
+      if (dy > 0) setDir(0,1); else setDir(0,-1);
+    }
+    sx = x; sy = y;
+  }
+  function tEnd(){ sx = null; sy = null; }
+
+  // Attach to document so it works even if the finger starts outside the canvas
+  document.addEventListener("touchstart", tStart, {passive:true});
+  document.addEventListener("touchmove", tMove, {passive:false});
+  document.addEventListener("touchend", tEnd, {passive:true});
 
 
   window.addEventListener("keydown", (e) => {
@@ -546,5 +574,14 @@
   rafId = requestAnimationFrame(loop);
 })();
 </script>
+
+  <div class="overlayStart" id="startOverlay">
+    <div class="overlayCard">
+      <h2>TAP TO START</h2>
+      <p>Su telefono: tocca per avviare, poi fai swipe per cambiare direzione.</p>
+      <div class="tap">TOCCA LO SCHERMO</div>
+    </div>
+  </div>
+
 </body>
 </html>
