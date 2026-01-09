@@ -60,10 +60,6 @@
     }
     canvas{width:100%; height:auto; display:block;
       background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.35));
-    
-      aspect-ratio: 1 / 1;
-      height: auto;
-      background: #05050a;
     }
     .side{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
     .row{display:flex; gap:10px; flex-wrap:wrap;}
@@ -98,7 +94,6 @@
     html, body { overscroll-behavior: none; }
     body { touch-action: none; -webkit-user-select: none; user-select: none; }
     canvas { touch-action: none; }
-
 </style>
 </head>
 <body>
@@ -111,7 +106,7 @@
             <img class="logoImg" src="logo_phnx.png" alt="PHNX Logo">
           </div>
           <div class="title">
-            <b>PHNX • SHIBUYA SNAKE</b>
+            <b>PHNX • SHIBUYA SNAKE  •  VERSION v103</b>
             <span>Play to Win Discount • Streetwear Gaming Room</span>
           </div>
         </div>
@@ -183,7 +178,7 @@
 <script>
 (() => {
   // ====== LINK (per QR) ======
-  const GAME_URL = "https://giuggio69.github.io/phnx-snake/?v=102";
+  const GAME_URL = "https://giuggio69.github.io/phnx-snake/?v=103";
   document.getElementById("gameLink").textContent = GAME_URL;
 
   const copyLinkBtn = document.getElementById("copyLinkBtn");
@@ -206,6 +201,26 @@
 // ====== Game ======
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
+
+  // ====== CANVAS SELF-TEST (v103) ======
+  // This draws even if the game loop never starts.
+  function canvasSelfTest(){
+    try{
+      ctx.save();
+      // border
+      ctx.strokeStyle = "rgba(255,59,107,0.95)";
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3,3,canvas.width-6,canvas.height-6);
+      // dot
+      ctx.fillStyle = "rgba(0,245,212,0.95)";
+      ctx.beginPath();
+      ctx.arc(canvas.width*0.5, canvas.height*0.5, 14, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    } catch(e) {}
+  }
+  canvasSelfTest();
+
   const GRID = 18;
   const CELL = canvas.width / GRID;
 
@@ -241,7 +256,6 @@
   let snake, dir, pendingDir, food, score, level, unlocked;
 
   function resetGame() {
-    if (jsStatusEl) { jsStatusEl.style.display = "flex"; jsStatusEl.querySelector("div").textContent = "JS OK — TAP TO START"; }
     snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
     dir = {x:1,y:0};
     pendingDir = null;
@@ -275,7 +289,7 @@
     ctx.fillStyle = "rgba(0,0,0,0.15)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.strokeStyle = "rgba(255,255,255,0.28)";
     ctx.lineWidth = 1;
     for (let i=0;i<=GRID;i++) {
       ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, canvas.height); ctx.stroke();
@@ -354,7 +368,7 @@
       }
     }
 
-    if (!running) overlay("TAP TO START");
+    if (!running) overlay("Premi Start");
     else if (paused) overlay("In Pausa");
   }
 
@@ -408,7 +422,6 @@
   }
 
   function start() {
-    if (jsStatusEl) jsStatusEl.style.display = "none";
     if (!running) {
       running = true;
       paused = false;
@@ -476,23 +489,16 @@
   }
 
   
-  // Mobile controls: tap to start, swipe to move (on the game area)
+  // ====== Mobile controls: v103 (tap + swipe on canvas) ======
   let sx = null, sy = null;
+  function tapStart(){ if (!running) start(); }
 
-  function tapStart(){
-    if (!running) start();
-  }
-
-  canvas.addEventListener("pointerdown", () => {
-    // pointer events work on iOS 13+ and Android
-    tapStart();
-  });
+  canvas.addEventListener("pointerdown", () => { tapStart(); });
 
   canvas.addEventListener("touchstart", (e) => {
     if (!e.touches || !e.touches.length) return;
     const t = e.touches[0];
-    sx = t.clientX;
-    sy = t.clientY;
+    sx = t.clientX; sy = t.clientY;
     tapStart();
   }, {passive:true});
 
@@ -503,26 +509,14 @@
     const dx = t.clientX - sx;
     const dy = t.clientY - sy;
     const ax = Math.abs(dx), ay = Math.abs(dy);
-    const threshold = 14;
-    if (ax < threshold && ay < threshold) return;
-
-    // prevent scrolling while swiping
+    if (ax < 14 && ay < 14) return;
     e.preventDefault();
-
-    if (ax > ay){
-      if (dx > 0) setDir(1,0);
-      else setDir(-1,0);
-    } else {
-      if (dy > 0) setDir(0,1);
-      else setDir(0,-1);
-    }
-    sx = t.clientX;
-    sy = t.clientY;
+    if (ax > ay) setDir(dx > 0 ? 1 : -1, 0);
+    else setDir(0, dy > 0 ? 1 : -1);
+    sx = t.clientX; sy = t.clientY;
   }, {passive:false});
 
-  canvas.addEventListener("touchend", () => {
-    sx = null; sy = null;
-  }, {passive:true});
+  canvas.addEventListener("touchend", () => { sx = null; sy = null; }, {passive:true});
 
 
   window.addEventListener("keydown", (e) => {
