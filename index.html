@@ -460,9 +460,20 @@
   }
 
   function gameOver() {
-    running = false; paused = false;
-    drawGrid(); draw(); overlay("Game Over");
-    setTimeout(() => { draw(); }, 900);
+    running = false;
+    paused = false;
+
+    // Show game over overlay briefly
+    drawGrid();
+    draw();
+    overlay("Game Over");
+
+    // Fully reset after a short delay (snake + score + level)
+    setTimeout(() => {
+      resetGame(); // sets running=false and shows "Premi Start" / mobile overlay
+      draw();
+    }, 600);
+  }, 900);
   }
 
   function makeCode() {
