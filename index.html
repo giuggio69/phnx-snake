@@ -94,37 +94,6 @@
     html, body { overscroll-behavior: none; }
     body { touch-action: none; -webkit-user-select: none; user-select: none; }
     canvas { touch-action: none; }
-    .overlayStart{
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.55);
-      z-index: 9999;
-      padding: 20px;
-    }
-    .overlayCard{
-      width: min(520px, 92vw);
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(0,0,0,0.35);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-      padding: 18px;
-      text-align: center;
-    }
-    .overlayCard h2{ margin: 0 0 8px; font-size: 22px; letter-spacing: 0.4px; }
-    .overlayCard p{ margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
-    .overlayCard .tap{
-      margin-top: 14px;
-      display:inline-block;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-weight: 800;
-      letter-spacing: 0.6px;
-      border: 1px solid rgba(255,59,107,0.55);
-      background: rgba(255,59,107,0.14);
-    }
 
 </style>
 </head>
@@ -144,7 +113,7 @@
         </div>
         <div class="pill" id="challengePill">Sfida: raggiungi <span id="targetLabel">30</span> punti → sconto</div>
       </div>
-      <canvas id="game" width="640" height="640" tabindex="0"></canvas>
+      <canvas id="game" width="640" height="640"></canvas>
     </div>
 
     <div class="card">
@@ -210,7 +179,7 @@
 <script>
 (() => {
   // ====== LINK (per QR) ======
-  const GAME_URL = "https://giuggio69.github.io/phnx-snake/?v=100";
+  const GAME_URL = "https://giuggio69.github.io/phnx-snake/?v=101";
   document.getElementById("gameLink").textContent = GAME_URL;
 
   const copyLinkBtn = document.getElementById("copyLinkBtn");
@@ -252,11 +221,6 @@
   const copyBtn = document.getElementById("copyBtn");
   const newChallengeBtn = document.getElementById("newChallengeBtn");
   const targetLabel = document.getElementById("targetLabel");
-
-  const startOverlay = document.getElementById("startOverlay");
-  const isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
-
-
 
   targetLabel.textContent = TARGET_SCORE;
 
@@ -337,12 +301,9 @@
   }
 
   function draw() {
-    if (isTouch && startOverlay) {
-      startOverlay.style.display = running ? "none" : "flex";
-    }
     drawGrid();
 
-// Food (PHNX logo)
+    // Food (PHNX logo)
     const fx = food.x * CELL, fy = food.y * CELL;
 
     // Background tile
@@ -388,7 +349,7 @@
       }
     }
 
-    if (!running) overlay("Premi Start");
+    if (!running) overlay("TAP TO START");
     else if (paused) overlay("In Pausa");
   }
 
@@ -463,14 +424,12 @@
     running = false;
     paused = false;
 
-    // Show game over overlay briefly
     drawGrid();
     draw();
     overlay("Game Over");
 
-    // Fully reset after a short delay (snake + score + level)
     setTimeout(() => {
-      resetGame(); // sets running=false and shows "Premi Start" / mobile overlay
+      resetGame();
       draw();
     }, 600);
   }, 900);
@@ -511,51 +470,53 @@
   }
 
   
-  // Start the game on tap (mobile)
+  // Mobile controls: tap to start, swipe to move (on the game area)
+  let sx = null, sy = null;
+
   function tapStart(){
     if (!running) start();
   }
-  if (startOverlay){
-    startOverlay.addEventListener("click", tapStart);
-    startOverlay.addEventListener("touchstart", (e)=>{ tapStart(); }, {passive:true});
-  }
-  document.addEventListener("click", (e)=>{ if (isTouch) tapStart(); }, {passive:true});
 
-  // Swipe anywhere (mobile) — robust
-  let sx = null, sy = null;
-  function tStart(e){
-    if (!e.touches || !e.touches.length) return;
-    sx = e.touches[0].clientX;
-    sy = e.touches[0].clientY;
+  canvas.addEventListener("pointerdown", () => {
+    // pointer events work on iOS 13+ and Android
     tapStart();
-  }
-  function tMove(e){
+  });
+
+  canvas.addEventListener("touchstart", (e) => {
+    if (!e.touches || !e.touches.length) return;
+    const t = e.touches[0];
+    sx = t.clientX;
+    sy = t.clientY;
+    tapStart();
+  }, {passive:true});
+
+  canvas.addEventListener("touchmove", (e) => {
     if (sx === null || sy === null) return;
     if (!e.touches || !e.touches.length) return;
-    const x = e.touches[0].clientX;
-    const y = e.touches[0].clientY;
-    const dx = x - sx;
-    const dy = y - sy;
+    const t = e.touches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
     const ax = Math.abs(dx), ay = Math.abs(dy);
     const threshold = 14;
     if (ax < threshold && ay < threshold) return;
 
-    // prevent scrolling
+    // prevent scrolling while swiping
     e.preventDefault();
 
     if (ax > ay){
-      if (dx > 0) setDir(1,0); else setDir(-1,0);
+      if (dx > 0) setDir(1,0);
+      else setDir(-1,0);
     } else {
-      if (dy > 0) setDir(0,1); else setDir(0,-1);
+      if (dy > 0) setDir(0,1);
+      else setDir(0,-1);
     }
-    sx = x; sy = y;
-  }
-  function tEnd(){ sx = null; sy = null; }
+    sx = t.clientX;
+    sy = t.clientY;
+  }, {passive:false});
 
-  // Attach to document so it works even if the finger starts outside the canvas
-  document.addEventListener("touchstart", tStart, {passive:true});
-  document.addEventListener("touchmove", tMove, {passive:false});
-  document.addEventListener("touchend", tEnd, {passive:true});
+  canvas.addEventListener("touchend", () => {
+    sx = null; sy = null;
+  }, {passive:true});
 
 
   window.addEventListener("keydown", (e) => {
@@ -585,14 +546,5 @@
   rafId = requestAnimationFrame(loop);
 })();
 </script>
-
-  <div class="overlayStart" id="startOverlay">
-    <div class="overlayCard">
-      <h2>TAP TO START</h2>
-      <p>Su telefono: tocca per avviare, poi fai swipe per cambiare direzione.</p>
-      <div class="tap">TOCCA LO SCHERMO</div>
-    </div>
-  </div>
-
 </body>
 </html>
