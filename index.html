@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PHNX — Shibuya Snake</title>
+  <style>
+    :root{
+      --bg:#0b0b10;
+      --panel:#11111a;
+      --grid:#1f1f2e;
+      --text:#eaeaf2;
+      --muted:#a5a5c7;
+      --accent:#7c5cff;
+      --accent2:#00f5d4;
+      --danger:#ff3b6b;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    body{
+      margin:0;
+      background:radial-gradient(1200px 800px at 70% 10%, #1a1230 0%, var(--bg) 55%);
+      color:var(--text);
+      display:flex; min-height:100vh; align-items:center; justify-content:center;
+      padding:18px;
+    }
+    .wrap{width:min(980px, 100%);display:grid;grid-template-columns: 1.2fr 0.8fr;gap:16px;}
+    @media (max-width: 900px){.wrap{grid-template-columns:1fr;}}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      overflow:hidden;
+    }
+    .header{
+      padding:12px 14px;
+      display:flex;align-items:center;justify-content:space-between;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      background:rgba(0,0,0,0.15);
+      gap:12px;
+    }
+    .brand{display:flex; gap:12px; align-items:center; min-width: 0;}
+    .logoStack{display:flex; align-items:center; gap:10px;}
+    .logoImg{
+      height:34px; width:auto;
+      filter: drop-shadow(0 0 10px rgba(124,92,255,0.15));
+      border-radius:10px;
+      background: rgba(255,255,255,0.06);
+      padding:6px;
+    }
+    .title{line-height:1.12; min-width:0;}
+    .title b{display:block; font-size:14px; letter-spacing:0.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .title span{display:block; font-size:12px; color:var(--muted);}
+    .pill{
+      font-size:12px; color:var(--text);
+      padding:7px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(0,0,0,0.18);
+      white-space:nowrap;
+    }
+    canvas{width:100%; height:auto; display:block;
+      background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.35));
+    }
+    .side{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
+    .row{display:flex; gap:10px; flex-wrap:wrap;}
+    .stat{flex:1;min-width:120px;background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px;padding:10px 12px;}
+    .stat .k{font-size:11px;color:var(--muted);}
+    .stat .v{font-size:18px;margin-top:2px;}
+    .btnrow{display:flex; gap:10px; flex-wrap:wrap;}
+    button{cursor:pointer;border:1px solid rgba(255,255,255,0.14);background:rgba(0,0,0,0.25);color:var(--text);
+      border-radius:14px;padding:10px 12px;font-weight:600;transition:transform .06s ease,border-color .2s ease,background .2s ease;}
+    button:hover{border-color:rgba(255,255,255,0.24); background:rgba(255,255,255,0.06);}
+    button:active{transform:translateY(1px);}
+    .primary{border-color: rgba(255,59,107,0.55);background: rgba(124,92,255,0.18);box-shadow: 0 0 22px rgba(124,92,255,0.18);}
+    .danger{border-color: rgba(255,59,107,0.55);background: rgba(255,59,107,0.12);}
+    .hint{font-size:12px;color:var(--muted);line-height:1.35;padding:10px 12px;border-radius:14px;
+      border:1px dashed rgba(255,255,255,0.12);background: rgba(0,0,0,0.12);}
+    .discount{padding:10px 12px;border-radius:14px;border:1px solid rgba(0,245,212,0.35);background: rgba(0,245,212,0.08);display:none;}
+    .discount b{display:block;font-size:12px;color:var(--accent2);}
+    .code{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      margin-top:6px;font-size:16px;letter-spacing:0.8px;word-break:break-all;}
+    .qrbox{display:flex; gap:12px; align-items:center; padding:10px 12px; border-radius:14px;
+      border:1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.18);}
+    .qrimg{width:120px;height:120px;border-radius:12px;border:1px solid rgba(255,255,255,0.10); background:#fff;}
+    .qrmeta{flex:1; min-width: 0;}
+    .qrmeta .k{font-size:11px;color:var(--muted);}
+    .qrmeta .link{font-size:12px; color: var(--text); margin-top:6px; word-break: break-all;}
+    .touch{display:none;margin-top:6px;gap:10px;}
+    .touchgrid{display:grid;grid-template-columns: 60px 60px 60px;gap:8px;justify-content:center;margin-top:6px;}
+    .tbtn{width:60px;height:48px;border-radius:14px;font-size:16px;}
+    @media (max-width: 900px){.touch{display:block;}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <div class="brand">
+          <div class="logoStack">
+            <img class="logoImg" src="logo_eagle.png" alt="Logo Eagle">
+            <img class="logoImg" src="logo_phnx.png" alt="PHNX Logo">
+          </div>
+          <div class="title">
+            <b>PHNX • SHIBUYA SNAKE</b>
+            <span>Play to Win Discount • Streetwear Gaming Room</span>
+          </div>
+        </div>
+        <div class="pill" id="challengePill">Sfida: raggiungi <span id="targetLabel">30</span> punti → sconto</div>
+      </div>
+      <canvas id="game" width="640" height="640"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="side">
+        <div class="row">
+          <div class="stat"><div class="k">Punteggio</div><div class="v" id="score">0</div></div>
+          <div class="stat"><div class="k">Livello</div><div class="v" id="level">1</div></div>
+          <div class="stat"><div class="k">Record</div><div class="v" id="best">0</div></div>
+        </div>
+
+        <div class="qrbox">
+          <img class="qrimg" src="qr_game.png" alt="QR code gioco">
+          <div class="qrmeta">
+            <div class="k">QR CODE — Apri il gioco sul telefono</div>
+            <div class="link" id="gameLink"></div>
+            <div class="btnrow" style="margin-top:10px;">
+              <button id="copyLinkBtn">Copia link</button>
+            </div>
+            <div class="k" style="margin-top:8px;">Nota: per funzionare deve essere un link online (non un file locale).</div>
+          </div>
+        </div>
+
+        <div class="btnrow">
+          <button class="primary" id="startBtn">Start / Resume</button>
+          <button id="pauseBtn">Pause</button>
+          <button class="danger" id="resetBtn">Reset</button>
+        </div>
+
+        <div class="hint">
+          <b>Controlli:</b> Frecce o WASD. <br/>
+          <b>Regola:</b> mangia i “tag” senza toccare muri o te stesso. <br/>
+          <b>Livelli:</b> ogni 10 punti aumenta la velocità. <br/>
+          <b>Sconto:</b> al raggiungimento del target, si genera un codice da mostrare in cassa.
+        </div>
+
+        <div class="discount" id="discountBox">
+          <b>CODICE SCONTO SBLOCCATO ✅</b>
+          <div class="code" id="discountCode"></div>
+          <div class="btnrow" style="margin-top:10px;">
+            <button id="copyBtn">Copia codice</button>
+            <button id="newChallengeBtn">Nuova sfida</button>
+          </div>
+        </div>
+
+        <div class="touch">
+          <div class="hint" style="margin-top:0;">
+            <b>Mobile:</b> usa i pulsanti qui sotto.
+          </div>
+          <div class="touchgrid">
+            <div></div>
+            <button class="tbtn" data-dir="up">⬆️</button>
+            <div></div>
+            <button class="tbtn" data-dir="left">⬅️</button>
+            <button class="tbtn" data-dir="down">⬇️</button>
+            <button class="tbtn" data-dir="right">➡️</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ====== LINK (per QR) ======
+  const GAME_URL = "https://example.com/phnx-snake";
+  document.getElementById("gameLink").textContent = GAME_URL;
+
+  const copyLinkBtn = document.getElementById("copyLinkBtn");
+  copyLinkBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(GAME_URL);
+      copyLinkBtn.textContent = "Copiato ✅";
+      setTimeout(()=> copyLinkBtn.textContent = "Copia link", 900);
+    } catch(e) {
+      alert("Copia manualmente il link: " + GAME_URL);
+    }
+  });
+
+  // ====== Food Icon (PHNX logo) ======
+  const foodImg = new Image();
+  foodImg.src = "logo_phnx.png";
+  let foodImgReady = false;
+  foodImg.onload = () => { foodImgReady = true; };
+
+// ====== Game ======
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const GRID = 18;
+  const CELL = canvas.width / GRID;
+
+  let TARGET_SCORE = 30;
+  const STORE_PREFIX = "PHNX";
+  const DISCOUNT_PERCENT = 10;
+  const LEVEL_UP_EVERY = 10;
+
+  const scoreEl = document.getElementById("score");
+  const levelEl = document.getElementById("level");
+  const bestEl  = document.getElementById("best");
+  const startBtn = document.getElementById("startBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const discountBox = document.getElementById("discountBox");
+  const discountCodeEl = document.getElementById("discountCode");
+  const copyBtn = document.getElementById("copyBtn");
+  const newChallengeBtn = document.getElementById("newChallengeBtn");
+  const targetLabel = document.getElementById("targetLabel");
+
+  targetLabel.textContent = TARGET_SCORE;
+
+  const BEST_KEY = "phnx_snake_best";
+  let best = Number(localStorage.getItem(BEST_KEY) || 0);
+  bestEl.textContent = best;
+
+  let running = false;
+  let paused = false;
+  let tickMs = 140;
+  let rafId = null;
+  let lastTick = 0;
+
+  let snake, dir, pendingDir, food, score, level, unlocked;
+
+  function resetGame() {
+    snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+    dir = {x:1,y:0};
+    pendingDir = null;
+    score = 0;
+    level = 1;
+    unlocked = false;
+    tickMs = 140;
+    placeFood();
+    discountBox.style.display = "none";
+    updateUI();
+    draw();
+  }
+
+  function updateUI() {
+    scoreEl.textContent = score;
+    levelEl.textContent = level;
+    bestEl.textContent = best;
+  }
+
+  function randCell() { return Math.floor(Math.random() * GRID); }
+  function cellOccupied(x, y) { return snake.some(p => p.x === x && p.y === y); }
+
+  function placeFood() {
+    let x, y;
+    do { x = randCell(); y = randCell(); } while (cellOccupied(x, y));
+    food = {x, y};
+  }
+
+  function drawGrid() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "rgba(0,0,0,0.15)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 1;
+    for (let i=0;i<=GRID;i++) {
+      ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, canvas.height); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i*CELL); ctx.lineTo(canvas.width, i*CELL); ctx.stroke();
+    }
+  }
+
+  function roundRect(x, y, w, h, r, fill) {
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+    if (fill) ctx.fill();
+  }
+
+  function overlay(text){
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.font = "700 38px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(text, canvas.width/2, canvas.height/2);
+    ctx.textAlign = "left";
+  }
+
+  function draw() {
+    drawGrid();
+
+    // Food (PHNX logo)
+    const fx = food.x * CELL, fy = food.y * CELL;
+
+    // Background tile
+    ctx.fillStyle = "rgba(0,0,0,0.10)";
+    roundRect(fx+4, fy+4, CELL-8, CELL-8, 12, true);
+
+    if (foodImgReady) {
+      // Draw logo centered, keep aspect ratio
+      const pad = Math.max(6, CELL * 0.18);
+      const w = CELL - pad*2;
+      const h = CELL - pad*2;
+      ctx.save();
+      // Clip to rounded rect for a clean badge look
+      roundRect(fx+5, fy+5, CELL-10, CELL-10, 10, false);
+      ctx.clip();
+      ctx.drawImage(foodImg, fx + pad, fy + pad, w, h);
+      ctx.restore();
+
+      // small neon outline
+      ctx.strokeStyle = "rgba(0,245,212,0.55)";
+      ctx.lineWidth = 2;
+      roundRect(fx+5, fy+5, CELL-10, CELL-10, 10, false);
+      ctx.stroke();
+    } else {
+      // Fallback if image hasn't loaded yet
+      ctx.fillStyle = "rgba(0,245,212,0.85)";
+      roundRect(fx+6, fy+6, CELL-12, CELL-12, 10, true);
+    }
+// Snake
+    for (let i=0;i<snake.length;i++) {
+      const p = snake[i];
+      const x = p.x * CELL, y = p.y * CELL;
+
+      if (i === 0) {
+        ctx.fillStyle = "rgba(255,59,107,0.95)";
+        roundRect(x+4, y+4, CELL-8, CELL-8, 12, true);
+        ctx.fillStyle = "rgba(0,245,212,0.9)";
+        ctx.beginPath(); ctx.arc(x+CELL*0.65, y+CELL*0.40, 3.2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+CELL*0.65, y+CELL*0.62, 3.2, 0, Math.PI*2); ctx.fill();
+      } else {
+        ctx.fillStyle = "rgba(255,59,107,0.55)";
+        roundRect(x+5, y+5, CELL-10, CELL-10, 10, true);
+      }
+    }
+
+    if (!running) overlay("Premi Start");
+    else if (paused) overlay("In Pausa");
+  }
+
+  function step() {
+    if (pendingDir) { dir = pendingDir; pendingDir = null; }
+
+    const head = snake[0];
+    const next = {x: head.x + dir.x, y: head.y + dir.y};
+
+    if (next.x < 0 || next.x >= GRID || next.y < 0 || next.y >= GRID) return gameOver();
+    if (snake.some((p, idx) => idx !== 0 && p.x === next.x && p.y === next.y)) return gameOver();
+
+    snake.unshift(next);
+
+    if (next.x === food.x && next.y === food.y) {
+      score++;
+      const newLevel = 1 + Math.floor(score / LEVEL_UP_EVERY);
+      if (newLevel !== level) {
+        level = newLevel;
+        tickMs = Math.max(55, 140 - (level-1) * 10);
+      }
+      placeFood();
+
+      if (!unlocked && score >= TARGET_SCORE) {
+        unlocked = true;
+        showDiscount();
+      }
+    } else {
+      snake.pop();
+    }
+
+    if (score > best) {
+      best = score;
+      localStorage.setItem(BEST_KEY, String(best));
+    }
+
+    updateUI();
+    draw();
+  }
+
+  function loop(ts){
+    if (running && !paused) {
+      if (!lastTick) lastTick = ts;
+      const delta = ts - lastTick;
+      if (delta >= tickMs) {
+        lastTick = ts;
+        step();
+      }
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function start() {
+    if (!running) {
+      running = true;
+      paused = false;
+      lastTick = 0;
+      draw();
+    } else {
+      paused = false;
+      draw();
+    }
+  }
+
+  function pause() {
+    if (!running) return;
+    paused = !paused;
+    draw();
+  }
+
+  function gameOver() {
+    running = false; paused = false;
+    drawGrid(); draw(); overlay("Game Over");
+    setTimeout(() => { draw(); }, 900);
+  }
+
+  function makeCode() {
+    const rnd = () => Math.random().toString(36).slice(2, 6).toUpperCase();
+    const stamp = Date.now().toString(36).toUpperCase().slice(-4);
+    return `${STORE_PREFIX}${DISCOUNT_PERCENT}-${rnd()}-${rnd()}-${stamp}`;
+  }
+
+  function showDiscount(){
+    discountCodeEl.textContent = makeCode();
+    discountBox.style.display = "block";
+  }
+
+  copyBtn.addEventListener("click", async () => {
+    const text = discountCodeEl.textContent.trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.textContent = "Copiato ✅";
+      setTimeout(()=> copyBtn.textContent = "Copia codice", 900);
+    } catch(e) {
+      alert("Copia manualmente il codice: " + text);
+    }
+  });
+
+  newChallengeBtn.addEventListener("click", () => {
+    TARGET_SCORE = [20,30,40,50,60][Math.floor(Math.random()*5)];
+    targetLabel.textContent = TARGET_SCORE;
+    unlocked = false;
+    discountBox.style.display = "none";
+  });
+
+  function setDir(nx, ny){
+    if (dir.x === -nx && dir.y === -ny) return;
+    pendingDir = {x:nx, y:ny};
+  }
+
+  window.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (k === "arrowup" || k === "w") setDir(0,-1);
+    else if (k === "arrowdown" || k === "s") setDir(0,1);
+    else if (k === "arrowleft" || k === "a") setDir(-1,0);
+    else if (k === "arrowright" || k === "d") setDir(1,0);
+    else if (k === " "){ e.preventDefault(); pause(); }
+  });
+
+  document.querySelectorAll("[data-dir]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const d = btn.getAttribute("data-dir");
+      if (d==="up") setDir(0,-1);
+      if (d==="down") setDir(0,1);
+      if (d==="left") setDir(-1,0);
+      if (d==="right") setDir(1,0);
+    });
+  });
+
+  startBtn.addEventListener("click", start);
+  pauseBtn.addEventListener("click", pause);
+  resetBtn.addEventListener("click", () => { running = false; paused = false; resetGame(); });
+
+  resetGame();
+  rafId = requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
