@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PHNX — Shibuya Snake</title>
   <style>
+    
+    html, body { overscroll-behavior: none; }
+
     :root{
       --bg:#0b0b10;
       --panel:#11111a;
@@ -60,6 +63,8 @@
     }
     canvas{width:100%; height:auto; display:block;
       background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.35));
+    
+      touch-action: none;
     }
     .side{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
     .row{display:flex; gap:10px; flex-wrap:wrap;}
@@ -174,7 +179,7 @@
 <script>
 (() => {
   // ====== LINK (per QR) ======
-  const GAME_URL = "https://example.com/phnx-snake";
+  const GAME_URL = "https://giuggio69.github.io/phnx-snake/";
   document.getElementById("gameLink").textContent = GAME_URL;
 
   const copyLinkBtn = document.getElementById("copyLinkBtn");
@@ -198,7 +203,30 @@
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
   const GRID = 18;
-  const CELL = canvas.width / GRID;
+  let CELL = 0;
+
+  function resizeCanvas(){
+    // responsive square canvas
+    const maxSize = 640;
+    const containerWidth = canvas.getBoundingClientRect().width || maxSize;
+    const sizeCss = Math.max(280, Math.min(maxSize, Math.floor(containerWidth)));
+    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+
+    canvas.style.width = sizeCss + "px";
+    canvas.style.height = sizeCss + "px";
+    canvas.width = sizeCss * dpr;
+    canvas.height = sizeCss * dpr;
+
+    // reset transform for high-DPI
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    CELL = sizeCss / GRID;
+  }
+
+  window.addEventListener("resize", () => {
+    resizeCanvas();
+    draw();
+  });
+
 
   let TARGET_SCORE = 30;
   const STORE_PREFIX = "PHNX";
@@ -261,15 +289,17 @@
   }
 
   function drawGrid() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const W = GRID * CELL;
+    const H = GRID * CELL;
+ctx.clearRect(0,0,W,H);
     ctx.fillStyle = "rgba(0,0,0,0.15)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillRect(0,0,W,H);
 
     ctx.strokeStyle = "rgba(255,255,255,0.06)";
     ctx.lineWidth = 1;
     for (let i=0;i<=GRID;i++) {
-      ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, canvas.height); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, i*CELL); ctx.lineTo(canvas.width, i*CELL); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i*CELL); ctx.lineTo(W, i*CELL); ctx.stroke();
     }
   }
 
@@ -287,11 +317,11 @@
 
   function overlay(text){
     ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillRect(0,0,W,H);
     ctx.fillStyle = "rgba(255,255,255,0.92)";
     ctx.font = "700 38px system-ui";
     ctx.textAlign = "center";
-    ctx.fillText(text, canvas.width/2, canvas.height/2);
+    ctx.fillText(text, (GRID*CELL)/2, (GRID*CELL)/2);
     ctx.textAlign = "left";
   }
 
@@ -455,6 +485,54 @@
     pendingDir = {x:nx, y:ny};
   }
 
+  
+  // Touch / Swipe controls on the canvas (mobile)
+  let touchStartX = null, touchStartY = null;
+
+  function onTouchStart(e){
+    if (!e.touches || !e.touches.length) return;
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    // Tap to start on mobile
+    if (!running) start();
+  }
+
+  function onTouchMove(e){
+    if (touchStartX === null || touchStartY === null) return;
+    if (!e.touches || !e.touches.length) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+
+    // prevent page scrolling while swiping
+    e.preventDefault();
+
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    const threshold = 12; // pixels
+    if (ax < threshold && ay < threshold) return;
+
+    if (ax > ay){
+      if (dx > 0) setDir(1,0);
+      else setDir(-1,0);
+    } else {
+      if (dy > 0) setDir(0,1);
+      else setDir(0,-1);
+    }
+    // reset start to avoid multiple rapid triggers
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+  }
+
+  function onTouchEnd(){
+    touchStartX = null;
+    touchStartY = null;
+  }
+
+  canvas.addEventListener("touchstart", onTouchStart, {passive: true});
+  canvas.addEventListener("touchmove", onTouchMove, {passive: false});
+  canvas.addEventListener("touchend", onTouchEnd, {passive: true});
+
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "arrowup" || k === "w") setDir(0,-1);
@@ -478,6 +556,7 @@
   pauseBtn.addEventListener("click", pause);
   resetBtn.addEventListener("click", () => { running = false; paused = false; resetGame(); });
 
+  resizeCanvas();
   resetGame();
   rafId = requestAnimationFrame(loop);
 })();
