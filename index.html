@@ -60,6 +60,10 @@
     }
     canvas{width:100%; height:auto; display:block;
       background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.35));
+    
+      aspect-ratio: 1 / 1;
+      height: auto;
+      background: #05050a;
     }
     .side{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
     .row{display:flex; gap:10px; flex-wrap:wrap;}
@@ -179,7 +183,7 @@
 <script>
 (() => {
   // ====== LINK (per QR) ======
-  const GAME_URL = "https://giuggio69.github.io/phnx-snake/?v=101";
+  const GAME_URL = "https://giuggio69.github.io/phnx-snake/?v=102";
   document.getElementById("gameLink").textContent = GAME_URL;
 
   const copyLinkBtn = document.getElementById("copyLinkBtn");
@@ -237,6 +241,7 @@
   let snake, dir, pendingDir, food, score, level, unlocked;
 
   function resetGame() {
+    if (jsStatusEl) { jsStatusEl.style.display = "flex"; jsStatusEl.querySelector("div").textContent = "JS OK — TAP TO START"; }
     snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
     dir = {x:1,y:0};
     pendingDir = null;
@@ -270,7 +275,7 @@
     ctx.fillStyle = "rgba(0,0,0,0.15)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
     ctx.lineWidth = 1;
     for (let i=0;i<=GRID;i++) {
       ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, canvas.height); ctx.stroke();
@@ -403,6 +408,7 @@
   }
 
   function start() {
+    if (jsStatusEl) jsStatusEl.style.display = "none";
     if (!running) {
       running = true;
       paused = false;
